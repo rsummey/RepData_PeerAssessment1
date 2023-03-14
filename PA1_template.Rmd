@@ -1,25 +1,141 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "RepResearch1"
+output: html_document
+date: "2023-03-14"
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(lattice)
+```
 
-## Loading and preprocessing the data
+# Data analysis
+
+This is an R Markdown document reporting an analysis of biometric data. It will contain:
+Commit containing full submission
+Code for reading in the dataset and/or processing the data
+Histogram of the total number of steps taken each day
+Mean and median number of steps taken each day
+Time series plot of the average number of steps taken
+The 5-minute interval that, on average, contains the maximum number of steps
+Code to describe and show a strategy for imputing missing data
+Histogram of the total number of steps taken each day after missing values are imputed
+Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+All of the R code needed to reproduce the results (numbers, plots, etc.) in the report
+
+```{Obtaining data, echo = TRUE}
+### reproducible research project1
+
+URL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(URL, "represearch")
+unzip("represearch")
+setwd("~/Box/DataScienceCourse/represearch")
+activity <- read.csv("activity.csv")
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{total steps, echo=TRUE}
+df1 <- tapply(activity$steps, factor(activity$date), 
+              sum, na.rm = TRUE)
+df1 <- as.data.frame(df1)
+colnames(df1) <- "total_steps"
+plot <- ggplot(df1) +
+  geom_bar(aes(x = rownames(df1), y = total_steps), stat = "identity")
+plot
+```
+
+````{mean and median daily steps, echo = TRUE}
+mean(df1$total_steps, na.rm = TRUE)
+median(df1$total_steps, na.rm = TRUE)
+````
+
+## time series
+```{time series steps daily, echo=TRUE}
+df2 <- tapply(activity$steps, factor(activity$interval), 
+              mean, na.rm = TRUE)
+df2 <- as.data.frame(df2)
+colnames(df2) <- "steps"
+p2 <- ggplot(df2) + 
+  geom_point(aes(x = rownames(df2), y = steps))
+p2
+```
+
+## time of day with maximum steps
+```` {max steps time, echo = TRUE}
+rownames(df2)[max(df2$steps)]
+````
+
+## missing values
+### determining how many
+```` {r, echo = TRUE}
+activity <- read.csv("activity.csv")
+table(is.na(activity$steps))
+````
+So 2304 measurements of 17568 are NA.
+
+### imputing averages in for that time of day
+```` {r, echo = TRUE}
+df2 <- tapply(activity$steps, factor(activity$interval), 
+              mean, na.rm = TRUE)
+missing <- which(is.na(activity))
+activitymissing <- activity[missing,]
+head(activitymissing)
+df2$interval = rownames(df2)
+activitymissing <- merge(activitymissing, df2, by =
+                                               "interval")
+activity<- na.omit(activity)
+activitymissing <- activitymissing[,c(1, 3:4)]
+colnames(activitymissing) <- c("interval", "date", "steps")
+activity <- rbind(activity, activitymissing)
+````
+
+### check graphs after imputing data
+```` {r, echo = TRUE}
+df3 <- tapply(activity$steps, factor(activity$date), 
+              sum, na.rm = TRUE)
+df3 <- as.data.frame(df3)
+colnames(df3) <- "total_steps"
+plot <- ggplot(df3) +
+  geom_bar(aes(x = rownames(df3), y = total_steps), stat = "identity")
+plot
+
+mean(df3$total_steps, na.rm = TRUE)
+median(df3$total_steps, na.rm = TRUE)
+
+df4 <- tapply(activity$steps, factor(activity$interval), 
+              mean, na.rm = TRUE)
+df4 <- as.data.frame(df4)
+colnames(df4) <- "steps"
+p4 <- ggplot(df4) + 
+  geom_point(aes(x = rownames(df4), y = steps))
+p4
+````
+Mean and median are now equal to each other after replacing average interval data; both higher now than before
+
+## now look at this by weekend vs weekday
+```` {r, echo = TRUE}
+activity$date <- as.Date(activity$date)
+activity$weekday <- weekdays(activity$date)
+activity$weekday <- replace(activity$weekday, activity$weekday %in%
+                              c("Monday", "Tuesday", "Wednesday",
+                                "Thursday", "Friday"),
+                            c("Weekday"))
+activity$weekday <- replace(activity$weekday, activity$weekday %in%
+                              c("Saturday", "Sunday"),
+                            c("Weekend"))
 
 
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
+p6 <- xyplot(steps ~ interval | weekday,
+       data = activity,
+       type = "l")
+p6
+````
 
 
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
